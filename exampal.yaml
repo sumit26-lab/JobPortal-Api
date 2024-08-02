@@ -1,0 +1,43 @@
+# this the Laerning Perpasu in Yaml file
+
+Information:
+  - FirstName: Sumit
+    MiddelName: Singh
+    LastName: Chouahn
+    CourseName: YML
+    BatchNumber: 01
+    Age: null
+
+#Array of List
+AnimalList:
+- Dog
+- Cat
+- Cow
+
+#Dictnoriy
+Dev:
+  Language: React
+  Backend : Node
+  Clude : AWS
+  Secure : True
+
+#dictnory and List
+Devloper :
+  - Martin :
+    name : Martin
+    Job_role : Front-End
+    Skill :
+    - Python
+    - Django
+    - vsCode
+    - signatur: > 
+        dhsghsajdahjahxcsajxhsaxjkxhsajx
+        xsxsxsxsxsxx
+
+  - Sumit :
+    name : Sumit
+    Job_role : Backend-End
+    Skill :
+    - Node
+    - JavaScript
+    - vsCode
