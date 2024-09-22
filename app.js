@@ -1,6 +1,9 @@
 const express=require('express')
 const app = express()
 require('dotenv').config()
+
+const port = process.env.PORT || 4000; 
+
 const userRoute= require('./route/user')
 const jobseeker= require('./route/Jobeeker_route/jobseeker')
  const resume= require('./route/Jobeeker_route/resume')
@@ -86,6 +89,6 @@ app.use(function(err,req,res,next){
     res.status(500).send(err.message)
 })
 //end
-app.listen(process.env.port,()=>{
-    console.log(`Server run on Port ${process.env.port}`)
+app.listen(port,()=>{
+    console.log(`Server run on Port ${port}`)
 })
