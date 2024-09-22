@@ -1,5 +1,6 @@
 //Get your own Node.js Server
 var nodemailer = require('nodemailer');
+const crypto= require('crypto')
 
 var transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -29,4 +30,11 @@ const EmailSend=({to,subject,text})=>{
   });
  })
 }
-module.exports=EmailSend
+
+const CreateResetToken= function(){
+  const resetToken= crypto.randomBytes(32).toString('hex')
+  const passwordResetToken=crypto.createHash('sha256').update(resetToken).digest('hex')
+  const passwordResetTokenExpire=Date.now()+10*60*1000
+  return{resetToken,passwordResetToken,passwordResetTokenExpire}
+}
+module.exports={EmailSend,CreateResetToken}

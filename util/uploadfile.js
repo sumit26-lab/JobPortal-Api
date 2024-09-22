@@ -32,16 +32,16 @@ const upload = multer({
 
 
 const s3clint= new S3Client({
-   region:process.env.Bucket_Region,
+   region:process.env.BUCKET_REGION,
     credentials:{
-        accessKeyId:process.env.Accesskey ,
-        secretAccessKey:process.env.Secretaccesskey
+        accessKeyId:process.env.ACCESS_KEY ,
+        secretAccessKey:process.env.SECRET_ACCESS_KEY
     }
 })
  async function putObjectUrl(fileName,contentType,body){
    console.log("file",fileName,contentType,body)
   const command= new PutObjectCommand({
-     Bucket:process.env.S3Bucket_name,
+     Bucket:process.env.S3_BUCKET_NAME,
      Key:`uploads/${fileName}`,
      Body:body,
      ContentType:contentType,

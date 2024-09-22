@@ -22,17 +22,18 @@ let refreshToken=cookies.jwt
 
     
    //verify store cookie token to data base token
-    jwt.verify(refreshToken,process.env.Refresh_Scret_token,(error,decode)=>{
+    jwt.verify(refreshToken,process.env.REFRESH_SECRET_TOKEN,(error,decode)=>{
         
-        console.log("Refresh_Token-Generated..............>")
+        console.log("Refresh_Token-Generated..............>",decode)
         if(error||rows.user_account_Id!==decode.user_account_Id) return res.sendStatus(403)
             const accessToken=jwt.sign({
         "UserInfo":{
-          "username": decode.username,
-          "roles_id": decode.role_id
+          "username": decode.UserInfo.username,
+          "roles_id": decode.UserInfo.user_type_id,
+          user_account_id:decode.UserInfo.user_account_id
         }
         },
-    process.env.Access_Screat_token,{expiresIn:'1d'})
+    process.env.ACCESS_SECRET_TOKEN,{expiresIn:'1d'})
     res.json({ accessToken})
      })
   

@@ -1,18 +1,20 @@
 const router=require('express').Router()
 const userControler= require('../controler/userControler')
-const {registerion}= require('../ExpressValidator/user.js')
+const {registerion,login,forgetpassword}= require('../ExpressValidator/user.js')
 const validationResult= require('../ExpressValidator/Validator.js')
-const pool= require('../util/db.js')
-const ROLES_LIST= require('../config/ROLES_LIST.js')
-const {verfiyRole}= require('../middelwere/verifyRole.js')
-const verfiyUser= require('../middelwere/verifyJWT.js')
-console.log(ROLES_LIST)
 
-router.post('/',userControler.Signup)
-router.post('/login',userControler.Login)
+
+
+
+router.post('/signup',registerion,validationResult,userControler.Signup)
+router.post('/login',login,validationResult, userControler.Login)
+router.post('/forgetpassword',forgetpassword,validationResult, userControler.forgetpassword)
+router.get('/resetpassword/:token', userControler.resetPassword)
+router.post('/resetpassword/:userId', userControler.changePassword)
 router.get('/logout',userControler.LogOut)
-router.put('/edit',verfiyUser, verfiyRole(ROLES_LIST.Admin,ROLES_LIST.Editor),userControler.Edit)
+// router.put('/edit',verfiyUser, verfiyRole(ROLES_LIST.Admin,ROLES_LIST.Editor),userControler.Edit)
 router.get('/get-cookie',userControler.getCookie)
+router.get('/getRecentJob',userControler.getRecentJobs)
 
 router.post('/verifyOtp',userControler.verifyOtp)
 router.post('/ResendOtp',userControler.resendOtp)

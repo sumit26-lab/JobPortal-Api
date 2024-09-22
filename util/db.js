@@ -1,20 +1,25 @@
 const { Pool}=require('pg')
 
-const pool= new Pool({
-    database:'findjobs',
-    host:'localhost',
-    user:'postgres',
-    port:5432,
-    password:'12345',
-})
-
-
-pool.connect().then(connect=>{
-    console.log("Posgrest Conntect")
- }).catch(error=>{
-    console.log(error)
+require('dotenv').config();
+ const pool = new Pool({
+   connectionString: process.env.POSTGRES_URL,
  })
 
- module.exports=pool
+// const pool= new Pool({
+//     database:'findjobs',
+//      host:'localhost',
+//      user:'postgres',
+//      port:5432,
+//      password:'12345',
+//  })
+
+
+ pool.connect().then(connect=>{
+    console.log("Posgrest Conntect")
+ }).catch(error=>{
+  throw new Error(error)
+ })
+
+module.exports=pool
 
 

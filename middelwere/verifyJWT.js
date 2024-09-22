@@ -7,7 +7,8 @@ const verfiyUser=(req,res,next)=>{
     if(!authHeder?.startsWith('Bearer ')) return res.sendStatus(401)
         let token= authHeder.split(' ')[1]
     // console.log("verfiyToken",token)
-        verify(token,process.env.Access_Screat_token,(err,decode)=>{
+        verify(token,process.env.ACCESS_SECRET_TOKEN,(err,decode)=>{
+            
             if(err) return res.sendStatus(403)
                 console.log("VerifyUser...>",decode)
                  //{return res.sendStatus(403)}

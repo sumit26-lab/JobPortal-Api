@@ -1,0 +1,10 @@
+const router=require('express').Router()
+const  {create,getId,getApplyJobinsertapplication_history, getApplyJob}= require('../../controler/Jobseeker/jobApplyControler')
+router.post('/',create)
+// router.put('/',insertapplication_history)
+router.get('/:id/:userId',getId)
+router.get('/:id',getApplyJob)
+// router.get('/',education_detail.getAlleducation_detail)
+// router.put('/:id',education_detail.update)
+// router.delete('/:id',education_detail.deleteEdution)
+module.exports=router

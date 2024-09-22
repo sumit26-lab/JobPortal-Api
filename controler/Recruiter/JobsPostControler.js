@@ -1,9 +1,10 @@
 const pool = require('../../util/db')
 exports.create = async (req, res) => {
-    let { posted_by_id, job_type_id, job_location_id, company_id } = req.body
+    console.log("JobPostData",req.body)
+    let { posted_by_id, job_type_id,job_location_id,  company_id } = req.body
     try {
         let PostQuery = 'insert into job_post(posted_by_id,job_type_id,job_location_id,company_id)values($1,$2,$3,$4) returning  id'
-        let postData = await pool.query(PostQuery, [posted_by_id, job_type_id, job_location_id, company_id])
+        let postData = await pool.query(PostQuery, [posted_by_id, job_type_id,job_location_id, company_id])
         let id = await postData.rows
 
         res.send(id)
@@ -131,27 +132,38 @@ exports.create = async (req, res) => {
 // };
 exports.getJobById = async (req, res) => {
     let id = parseInt(req.params.id, 10);
+    console.log("jobId",id)
     if (!id || isNaN(id)) {
         return res.status(400).json({ message: 'Invalid job post ID' });
     }
     let query = `SELECT
     jp.id AS job_post_id,
     jp.posted_by_id,
+    jp.job_location_id,
+    jp.job_type_id,
     jt.title,
+    jt.qualification,
+    jt.skills_required,
+    jt.experience_required,
+    jt.contactemail AS job_post_email,
     jt.type,
+    jt.id,
     jt.description,
-    jt.salary,
+    jt.min_salary,
+    jt.max_salary,
     jl.street_address AS job_street_address,
     jl.city AS job_city,
     jl.state AS job_state,
     jl.zip AS job_zip,
+    cl.street_address AS company_address,
    c.company_description,
    c.company_web,
    c.num_employes,
-   c.company_loaction,
+   c.company_locationid,
    c.company_contactnum,
   c.establishment_date,
   c.company_email,
+  c.company_name,
     jp.createat AS job_post_created_at  
 FROM
     job_post jp
@@ -159,10 +171,13 @@ JOIN
     job_type jt ON jp.job_type_id = jt.id
 JOIN
     job_location jl ON jp.job_location_id = jl.id
+
 JOIN
     company c ON jp.company_id = c.id
+JOIN 
+    company_location cl on c.company_locationid=cl.id    
 JOIN   
-    business_stream bs ON c.business_stream_id = bs.id 
+    business_streams bs ON c.business_streams_id = bs.id 
     WHERE jp.id=$1
     `;
 
@@ -187,20 +202,20 @@ exports.getAllJobpost = async (req, res) => {
     let offset = (page - 1) * limit; //  if pages 5-1 4 *3 12
     // let order = sortBy && sortOrder ? `${sortBy} ${sortOrder}` : 'jp.id ASC';
     let searchQuery = `%${search}%`;
-    let validSortByfields = ['jp.createat', 'jt.salary']
+    let validSortByfields = ['jp.createat', 'jt.max_salary']
     if (!validSortByfields.includes(sortBy)) {
         sortBy = 'jp.createat'
     }
-    console.log("validSortByfields", validSortByfields)
+   
     if (!['ASC', 'DESC'].includes(sortOrder)) {
         sortOrder = 'ASC'
     }
     //let countparameter = []
     let countQuery = ` select count(*) as total_count  from job_post as jp
        JOIN job_type jt on jp.job_type_id=jt.id
-       JOIN job_location jl on jp.job_location_id=jl.id
        JOIN company c on jp.company_id=c.id
-       JOIN business_stream bs on c.business_stream_id=bs.id
+       JOIN company_location cl on c.company_locationid=cl.id
+       JOIN business_streams bs on c.business_streams_id=bs.id
        WHERE jp.posted_by_id=$1
     `
 
@@ -210,16 +225,17 @@ exports.getAllJobpost = async (req, res) => {
             jt.title,
             jt.type,
             jt.description,
-            jt.salary,
-            jl.street_address AS job_street_address,
-            jl.city AS job_city,
-            jl.state AS job_state,
-            jl.zip AS job_zip,
+            jt.max_salary,
+            jt.min_salary,
+            cl.street_address AS job_street_address,
+            cl.city AS job_city,
+            cl.state AS job_state,
+            cl.zip AS job_zip,
            c.company_name,
            c.company_description,
            c.company_web,
            c.num_employes,
-           c.company_loaction,
+           c.company_locationid,
             c.company_contactnum,
             c.establishment_date,
             c.company_email,
@@ -232,8 +248,10 @@ exports.getAllJobpost = async (req, res) => {
             job_location jl ON jp.job_location_id = jl.id
         JOIN
             company c ON jp.company_id = c.id
+        JOIN 
+           company_location cl on c.company_locationid=cl.id
         JOIN   
-            business_stream bs ON c.business_stream_id = bs.id 
+            business_streams bs ON c.business_streams_id = bs.id 
             WHERE jp.posted_by_id=$1
             `;
 
@@ -268,42 +286,121 @@ LIMIT $${queryparameter.length + 1} OFFSET $${queryparameter.length + 2}`;
     }
 
 
-    // exports.getAllJobpost=async(req,res)=>{
-    //     let{page=1,limit=3,sortBy,sortOrder,serach=""}=req.query
-    //     let offset=(page-1)*limit
-    //     let order=`${sortBy} ${sortOrder}`
-    //     let searchQuery=`%${serach}%`
-    //     let query= `SELECT
-    //     jp.id AS job_post_id,
-    //     jp.posted_by_id,
-    //     jt.title,
-    //     jt.type,
-    //     jt.description,
-    //     jt.salary,
-    //     jl.street_address AS job_street_address,
-    //     jl.city AS job_city,
-    //     jl.state AS job_state,
-    //     jl.zip AS job_zip,
-    //     c.company_name,
-    //     jp.createat AS job_post_created_at
-    // FROM
-    //     job_post jp
-    // JOIN
-    //     job_type jt ON jp.job_type_id = jt.id
-    // JOIN
-    //     job_location jl ON jp.job_location_id = jl.id
-    // JOIN
-    //     company c ON jp.company_id = c.id
-    // JOIN
-    //     business_stream bs ON c.business_stream_id = bs.id
+    
+}
+exports.getALLJobs = async (req, res) => {
+  console.log("Apicall")
 
-    // ORDER BY
-    //     jp.createat DESC;
+    let { page = 1, limit = 3, sortBy = 'jp.createat', sortOrder = 'ASC', search = "" } = req.query;
+    let offset = (page - 1) * limit; //  if pages 5-1 4 *3 12
+    // let order = sortBy && sortOrder ? `${sortBy} ${sortOrder}` : 'jp.id ASC';
+    let searchQuery = `%${search}%`;
+    let validSortByfields = ['jp.createat', 'jt.max_salary']
+    if (!validSortByfields.includes(sortBy)) {
+        console.log('check fILDE')
+        sortBy = 'jp.createat'
+    }
+    console.log("sortBy", sortBy)
+    if (!['ASC', 'DESC'].includes(sortOrder)) {
+        sortOrder = 'ASC'
+    }
+    //let countparameter = []
+    let countQuery = ` select count(*) as total_count  from job_post as jp
+       JOIN job_type jt on jp.job_type_id=jt.id
+       JOIN company c on jp.company_id=c.id
+       JOIN company_location cl on c.company_locationid=cl.id
+       JOIN business_streams bs on c.business_streams_id=bs.id
+    `
+
+    let query = `SELECT
+            jp.id AS job_post_id,
+            jp.posted_by_id,
+            jt.title,
+            jt.type,
+            jt.description,
+            jt.max_salary,
+            jt.min_salary,
+            cl.street_address AS job_street_address,
+            cl.city AS job_city,
+            cl.state AS job_state,
+            cl.zip AS job_zip,
+           c.company_name,
+           c.company_description,
+           c.company_web,
+           c.num_employes,
+           c.company_locationid,
+            c.company_contactnum,
+            c.establishment_date,
+            c.company_email,
+            jp.createat AS job_post_created_at  
+        FROM
+            job_post jp
+        JOIN
+            job_type jt ON jp.job_type_id = jt.id
+        JOIN
+            job_location jl ON jp.job_location_id = jl.id
+        JOIN
+            company c ON jp.company_id = c.id
+        JOIN 
+           company_location cl on c.company_locationid=cl.id
+        JOIN   
+            business_streams bs ON c.business_streams_id = bs.id 
+            `;
+            let countparameter = []
+            let queryparameter = []
+    if (search) {
+        countQuery += `
+    AND jt.title ILIKE $1
+    `
+        query += `
+    AND jt.title ILIKE $1
+    `
+    countparameter.push(searchQuery)
+    queryparameter.push(searchQuery)
+    }
+    query += `
+ORDER BY
+    ${sortBy} ${sortOrder}
+LIMIT $${queryparameter.length +1} OFFSET $${queryparameter.length +2}`;
+queryparameter.push(limit, offset);
+    // queryparameter.push(limit, offset)
+    // console.log(query)
+    try {
+        const countResult = await pool.query(countQuery,countparameter);
+        const totalCount = countResult?.rows[0].total_count;
+        const { rows } = await pool.query(query,queryparameter);
+        console.log("rows",rows)
+        res.status(200).json({
+            totalCount, page, limit, rows
+        });
+    } catch (err) {
+        console.error('Error executing query:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 
 
-
-    // `
-    // const { rows } = await pool.query(query);
-    // res.status(200).json(rows);
+    
 }
 
+
+
+exports.UpdateJobPost=async(req,res)=>{
+    let id = parseInt(req.params.id, 10);
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid job post ID' });
+    }
+
+
+    let query=` UPDATE  job_post SET  `
+}
+
+exports.deleteJobPost=async(req,res)=>{
+    let id= parseInt(req.params.id,10)
+    if(!id|| isNaN(id)){
+        return res.status(400).json({message:"Invalid delete id"})
+    }
+    const query='DELETE FROM job_post where id=$1'
+    const queryinput=await pool.query(query,[id])
+    const  response=await queryinput.rowCount
+    res.sendStatus(204)
+}

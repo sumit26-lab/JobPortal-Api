@@ -1,7 +1,9 @@
 const bycrpt = require('bcrypt')
 const pool = require('../util/db')
-const EmailSend = require('../util/Email')
-const jwt= require('jsonwebtoken')
+const { CreateResetToken, EmailSend } = require('../util/Email')
+const crypto = require('crypto')
+
+const jwt = require('jsonwebtoken')
 //. Managing Users
 
 require('dotenv').config()
@@ -10,11 +12,10 @@ exports.Signup = async (req, res) => {
   let { username, password, email, user_type, gender, contactphone } = req.body
 
 
-  if (req.validationErrors) {
-    return res.status(400).json({ errors: req.validationErrors });
-  }
+
   try {
-    const otp = Math.floor(1000 + Math.random() * 9000);
+
+    const otp = Math.floor(1000 + Math.random() * 9000)
     let Hspassword = await bycrpt.hash(password, 10)
     let query = 'insert into  user_account (username,password,email,user_type_id,gender,contactphone)values($1,$2,$3,$4,$5,$6) returning  user_account_id'
     let insertData = await pool.query(query, [username, Hspassword, email, user_type, gender, contactphone])
@@ -23,15 +24,16 @@ exports.Signup = async (req, res) => {
     let expiry_time = new Date()
     expiry_time.setMinutes(expiry_time.getMinutes() + 20)
     let data = await insertData.rows[0]
-    console.log(data)
+
     await pool.query(queryOtp, [otp, expiry_time, email])
-    res.status(200).send({ user_account_id: data.user_account_id, message: "verifationis panding check You Email" })
+    return res.status(200).json({ status: 'success', message: "verifationis panding check You Email" })
 
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).send('Error creating user', error);
+    console.error('Error creating user:', error); // Log the error for debugging
+    return res.status(500).json({ message: 'Error creating user', error: error.message });
+
   }
-  res.send('ok')
+
 }
 
 exports.resendOtp = async (req, res) => {
@@ -58,7 +60,7 @@ exports.resendOtp = async (req, res) => {
       return res.status(500).json("server Error");
     }
     else {
-      res.status(200).send("ok")
+      res.sendStatus(200)
     }
   }
   catch (err) {
@@ -88,7 +90,7 @@ exports.verifyOtp = async (req, res) => {
     let is_active = await pool.query(queryverifyOtp, [email])
     let Querdeleteverfy = 'delete from otp where user_email=$1'
     let deletdVerfy = await pool.query(Querdeleteverfy, [email])
-    res.send("User verfiy")
+    res.sendStatus(200)
   } catch (error) {
     console.log(error.message)
     res.status(400).send({ error: error.message })
@@ -97,98 +99,290 @@ exports.verifyOtp = async (req, res) => {
 }
 
 exports.Login = async (req, res) => {
-  let { identifyer, password } = req.body
-
-  let query ={
-    text:`SELECT * FROM user_account
-  WHERE username = $1 OR email = $1`,
-  values:[identifyer]
+  if (!req.user) {
+    return res.status(400).json({ message: 'User not found.' });
   }
-  let {rows}= await pool.query(query)
-  if (rows.length === 0) {
-    return res.send("User Not Found! ") // User not found
-  }
-  let {password:Hspassword,user_account_id,user_type_id,username,role_id}= rows[0]
-  
+  let { password } = req.body
 
- 
-   let match= await bycrpt.compare(password,Hspassword)
- 
-   if(!match){
-    return res.send("Password dose not match! ")
-   }
-   let accessToken= jwt.sign({ "UserInfo":{username,user_account_id,user_type_id,role_id}},process.env.Access_Screat_token,{expiresIn:'25s'})
-   let refreshToken=jwt.sign({"username":{
-    username,user_account_id
-   }},process.env.Refresh_Scret_token,{expiresIn:'1d'})
-  if(refreshToken){
-    let queryuser_log={
-      text :`insert into user_log(user_account_id,refresh_token)
+
+  let { password: Hspassword, user_account_id, user_type_id, username } = req.user
+
+
+
+
+  let accessToken = jwt.sign({ "UserInfo": { username, user_account_id, user_type_id } }, process.env.ACCESS_SECRET_TOKEN, { expiresIn: '25s' })
+
+  let refreshToken = jwt.sign({
+    "UserInfo": {
+      username, user_account_id, user_type_id
+    }
+  }, process.env.REFRESH_SECRET_TOKEN, { expiresIn: '1d' })
+  console.log("RefreshToken", refreshToken)
+  if (refreshToken) {
+    let queryuser_log = {
+      text: `insert into user_log(user_account_id,refresh_token)
       values($1,$2) 
     ON CONFLICT(user_account_id)
-     DO UPDATE SET refresh_token=$2,las_login_date= CURRENT_TIMESTAMP  returning*`,values:[user_account_id,refreshToken]
+     DO UPDATE SET refresh_token=$2,las_login_date= CURRENT_TIMESTAMP  returning*`, values: [user_account_id, refreshToken]
+    }
+    let { rows } = await pool.query(queryuser_log)
+    if (rows.length === 0) {
+      return res.send("User Not Found! ") // User not found
+    }
+
   }
-  let {rows}= await pool.query(queryuser_log)
-  if (rows.length === 0) {
-    return res.send("User Not Found! ") // User not found
-  }
-   
-  }
-  res.cookie('jwt',refreshToken,{httpOnly:true,maxAge:24*60*60*1000})
-   res.send({accessToken})
-   
+  res.cookie('jwt', refreshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 })
+  res.json({ accessToken })
+
 }
 
-exports.LogOut=async(req,res)=>{
-  console.log("Logout API Callll--------->",req.cookies)
-  let  cookies= req.cookies
-    //console.log('api',cookies)
-if(!cookies?.jwt) return res.status(401)
-    console.log("cookie",cookies.jwt)
-let refreshToken=cookies.jwt
-console.log("ref",cookies)
-  
-    let query ={
-      text:`SELECT * FROM user_log
+exports.forgetpassword = async (req, res) => {
+  // let { identifyer } = req.body;
+
+  let data = req.user
+  let { resetToken, passwordResetToken, passwordResetTokenExpire } = await CreateResetToken()
+  let date = new Date(passwordResetTokenExpire)
+  //  let resetUrl=`${req.protocol}://localhost:3000/PasswordReset/${resetToken}`
+  resetUrl = `${req.protocol}://${req.headers.host}/PasswordReset/${resetToken}`;
+  let message = `we have received a reset password requset Plase use this below link to reset you password \n\n ${resetUrl}\n\n this reset password link valid only in 10 mints `
+  console.log(message)
+  try {
+
+    let queryOtp = {
+      text: `INSERT INTO resetpasswordtokens(user_account_id, token,expires_at)
+             VALUES ($1, $2, $3)`,
+      values: [data.user_account_id, passwordResetToken, date]
+    };
+
+    //Execute the query to insert or update OTP
+    await pool.query(queryOtp);
+
+
+    await EmailSend({
+      to: data.email,
+      subject: 'password change request received',
+      text: message
+    });
+
+
+    res.status(200).json({
+      status: true,
+      message: 'password link send you Email sent successfully.'
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'An error occurred while processing the request.' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  console.log("Token", req.params.token)
+  let token = crypto.createHash('sha256').update(req.params.token).digest('hex')
+  try {
+    let restQuery = {
+      text: `SELECT 
+	user_account_id,
+	token , 
+	expires_at,
+	CASE
+	WHEN expires_at < NOW() THEN 'Expired'
+	ELSE 'Valid'
+	END as status
+	FROM resetpasswordtokens 
+    WHERE token=$1`,
+      values: [token]
+    }
+
+    let response = await pool.query(restQuery)
+    let result = await response.rows[0]
+    if (!result) {
+      return res.status(400).json({ status: 'error', message: 'Invalid token.' });
+    }
+    if (result.status == 'Expired') {
+      return res.status(400).json({ status: 'error', message: 'Token is expired.' })
+    }
+    //response.rows[0]
+    res.status(200).json({
+      status: 'success',
+      message: 'Token is valid.',
+      user_account_id: result.user_account_id
+    });
+
+  }
+  catch (err) {
+    console.log(err)
+  }
+
+
+
+}
+exports.changePassword = async (req, res) => {
+  let user_account_id = req.params.userId
+  let newpassword = await bycrpt.hash(req.body.newPassword, 10);
+
+
+  try {
+    let restQuery = {
+      text: `UPDATE 
+	user_account Set password=$2 
+    WHERE user_account_id=$1`,
+      values: [user_account_id, newpassword]
+    }
+
+    let response = await pool.query(restQuery)
+    let result = await response.rows[0]
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password Successfuly Change.',
+
+    });
+
+  }
+  catch (err) {
+    res.status(400).json({
+      status: "falied",
+      message: err
+    })
+  }
+
+
+
+}
+
+exports.LogOut = async (req, res) => {
+  console.log("Logout API Callll--------->", req.cookies)
+  let cookies = req.cookies
+  //console.log('api',cookies)
+  if (!cookies?.jwt) return res.status(401)
+  console.log("cookie", cookies.jwt)
+  let refreshToken = cookies.jwt
+  console.log("ref", cookies)
+
+  let query = {
+    text: `SELECT * FROM user_log
     WHERE refresh_token = $1`,
-    values:[refreshToken]
-    }
-    let data= await pool.query(query)
-    let rows =await data.rows
-    console.log("InsideDatabaseRefreshToken",rows)
-    if (rows&&rows.length === 0) {
-      res.clearCookie('jwt',{httpOnly:true,sameSite:'None',secure:true})
-      return res.sendStatus(204)
-    }
-    
-    let queryDelete ={
-      text:`DELETE  FROM user_log
+    values: [refreshToken]
+  }
+  let data = await pool.query(query)
+  let rows = await data.rows
+  console.log("InsideDatabaseRefreshToken", rows)
+  if (rows && rows.length === 0) {
+    res.clearCookie('jwt', { httpOnly: true, sameSite: 'None', secure: true })
+    return res.sendStatus(204)
+  }
+
+  let queryDelete = {
+    text: `DELETE  FROM user_log
     WHERE refresh_token = $1`,
-    values:[refreshToken]
-    }
-    let user_log= await pool.query(queryDelete)
- let user_logdata= await user_log.rowCount
- console.log("deleted Row",user_logdata)
-if(user_logdata==1){
+    values: [refreshToken]
+  }
+  let user_log = await pool.query(queryDelete)
+  let user_logdata = await user_log.rowCount
+  console.log("deleted Row", user_logdata)
+  if (user_logdata == 1) {
     console.log("inside user")
-      res.clearCookie('jwt',{httpOnly:true,sameSite:'None',secure:true})
-      return res.send("ok")
-  
-}
+    res.clearCookie('jwt', { httpOnly: true, sameSite: 'None', secure: true })
+    return res.send("ok")
+
+  }
 
 }
-exports.getCookie=async (req, res) => {
-  try{
+exports.getCookie = async (req, res) => {
+  try {
 
     const cookieValue = req.cookies.jwt;
     res.send(cookieValue);
   }
-  catch(err){
+  catch (err) {
     res.sendStatus(404)
   }
- 
+
 }
-exports.Edit=async(req,res)=>{
+exports.Edit = async (req, res) => {
   console.log("edit")
   res.sendStatus(201)
+}
+
+exports.getRecentJobs = async (req, res) => {
+  console.log("Apicall")
+
+  let { page = 1, limit = 3, sortBy = 'jp.createat', sortOrder = 'ASC', } = req.query;
+
+  // let order = sortBy && sortOrder ? `${sortBy} ${sortOrder}` : 'jp.id ASC';
+  page = parseInt(page);
+  limit = parseInt(limit);
+  let offset = (page - 1) * limit; //  if pages 5-1 4 *3 12
+  //let countparameter = []
+  let countQuery = ` select count(*) as total_count  from job_post as jp
+       JOIN job_type jt on jp.job_type_id=jt.id
+       JOIN company c on jp.company_id=c.id
+       JOIN company_location cl on c.company_locationid=cl.id
+       JOIN business_streams bs on c.business_streams_id=bs.id
+
+    `
+
+  let query = `SELECT
+            jp.id AS job_post_id,
+            jp.posted_by_id,
+            jt.title,
+            jt.type,
+            jt.description,
+            jt.max_salary,
+            jt.min_salary,
+            cl.street_address AS job_street_address,
+            cl.city AS job_city,
+            cl.state AS job_state,
+            cl.zip AS job_zip,
+           c.company_name,
+           c.company_description,
+           c.company_web,
+           c.num_employes,
+           c.company_locationid,
+            c.company_contactnum,
+            c.establishment_date,
+            c.company_email,
+            jp.createat AS job_post_created_at  
+        FROM
+            job_post jp
+        JOIN
+            job_type jt ON jp.job_type_id = jt.id
+        JOIN
+            job_location jl ON jp.job_location_id = jl.id
+        JOIN
+            company c ON jp.company_id = c.id
+        JOIN 
+           company_location cl on c.company_locationid=cl.id
+        JOIN   
+            business_streams bs ON c.business_streams_id = bs.id 
+              ORDER BY ${sortBy} ${sortOrder}
+               LIMIT $1 OFFSET $2
+            `;
+
+
+  // queryparameter.push(limit, offset)
+  // console.log(query)
+  try {
+    const countResult = await pool.query(countQuery);
+    const totalCount = parseInt(countResult.rows[0].total_count);
+    const totalPages = Math.ceil(totalCount / limit)
+    if (page > totalPages && totalPages > 0) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+    const { rows } = await pool.query(query, [limit, offset]);
+    console.log("rows", rows)
+    res.status(200).json({
+      totalCount,
+      totalPages,
+      currentPage: page
+      , rows
+    });
+  } catch (err) {
+    console.error('Error executing query:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+
+
 }

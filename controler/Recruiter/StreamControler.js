@@ -1,31 +1,39 @@
 const pool = require('../../util/db')
-exports.create = async (req, res) => {
-    let {business_stream_name } = req.body
-    console.log("stream",req.body)
-    try {
-        let stramQuery = 'insert into business_stream(business_stream_name)values($1) returning  id'
-        let stream = await pool.query(stramQuery, [business_stream_name])
-        let business_stream_id = await stream.rows[0]
+// exports.create = async (req, res) => {
+//     let {business_stream_name } = req.body
+//     console.log("stream",req.body)
+//     try {
+//         let stramQuery = 'insert into business_stream(business_stream_name)values($1) returning  id'
+//         let stream = await pool.query(stramQuery, [business_stream_name])
+//         let business_stream_id = await stream.rows[0]
 
-        res.send(business_stream_id)
-    } catch (error) {
-        console.log(error.message)
-        res.status(400).send(error.message)
-    }
+//         res.send(business_stream_id)
+//     } catch (error) {
+//         console.log(error.message)
+//         res.status(400).send(error.message)
+//     }
 
+// }
+exports.getAllStream=async(req,res)=>{
+     let getAllStream= 'select * from business_streams'
+     let streamData= await pool.query(getAllStream)
+
+     res.send(streamData.rows)
 }
 exports.getStreamById=async(req,res)=>{
     let id= req.params.id
+    console.log("buinessStreamid",id)
     try{
 
-        let queryStrem='select business_stream_name from business_stream where id= $1' 
+        let queryStrem='select * from business_streams  where industry_id= $1' 
         let streamRow = await pool.query( queryStrem, [id]);
     
         if (streamRow.rows.length === 0) {
             // If no rows found, return 404 Not Found
             res.status(404).send({ error: 'Business stream not found' });
         } else {
-            let result = streamRow.rows[0];
+            let result = streamRow.rows;
+            console.log("resut....>",result)
             res.status(200).send(result);
         }
     } catch (err) {

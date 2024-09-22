@@ -1,13 +1,13 @@
 const pool = require('../../util/db')
 const create = async (req, res) => {
-    console.log(req.body)
+    console.log("comapny-craete",req.body)
     let { company_name,
         company_description,
-        num_employes,
+        business_streams_id,
         establishment_date,
         company_web,
-        company_loaction,
-        business_stream_id, user_account_id,industry_id } = req.body
+        num_employes,
+        user_account_id ,company_email,company_locationid,industry_id} = req.body
     company_contactnum = req.body.company_contactnum.trim().replace(/\s+/g, '');
 
 
@@ -16,23 +16,31 @@ const create = async (req, res) => {
         insert into company(
         company_name,
          company_description,
+         business_streams_id,
+         establishment_date,
+         company_web,
           num_employes,
-          company_loaction,
-          establishment_date,
-          company_contactnum,
-           company_web,
-            business_stream_id,user_account_id,industry_id)
-            values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id `
+          user_account_id,
+          company_email,
+          company_locationid,
+          industry_id,
+          company_contactnum)
+            values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id `
 
         let data = await pool.query(CompanyQuery, [
             company_name,
             company_description,
-            num_employes,
-            company_loaction,
+            business_streams_id,
             establishment_date,
-            company_contactnum,
             company_web,
-            business_stream_id, user_account_id,industry_id])
+             num_employes,
+             user_account_id,
+             company_email,
+             company_locationid,
+             industry_id,
+             company_contactnum
+        
+        ])
 
         let result = await data.rows[0]
 
@@ -46,15 +54,12 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
     let id = req.params.id
-    console.log(req.body)
+    console.log("upadteComapny",req.body)
     let { company_name,
         company_description,
         num_employes,
         establishment_date,
-        company_web,
-        company_loaction,
-        business_stream_id,
-        user_account_id,industry_id } = req.body
+        company_web,company_email, industry_id,business_streams_id} = req.body
     company_contactnum = req.body.company_contactnum ? req.body.company_contactnum.trim().replace(/\s+/g, '') : null;
 
     try {
@@ -65,24 +70,19 @@ const update = async (req, res) => {
           ,num_employes=$3 ,
           establishment_date=$4,
         company_web=$5,
-        company_loaction=$6,
-        business_stream_id=$7,
-        user_account_id =$8,
-        company_contactnum=$9,industry_id=$10 where id=$11
+        company_contactnum=$6,company_email=$7 ,industry_id=$8,business_streams_id=$9 where id=$10
         `
         let updateRow = await pool.query(query_update, [company_name,
             company_description,
             num_employes,
             establishment_date,
-            company_web,
-            company_loaction,
-            business_stream_id,
-            user_account_id, company_contactnum,industry_id, id])
+            company_web, company_contactnum,company_email,industry_id,business_streams_id, id])
         let result = await updateRow.rowCount
         console.log(result)
-        res.status(201).send("ok")
+        res.sendStatus(200)
     }
     catch (err) {
+        console.log("Error")
         console.log(err.message)
     }
 }
@@ -105,7 +105,7 @@ const getAllComapy = async (req, res) => {
 }
 const getIdComapy = async (req, res) => {
     let id = req.params.id
-    console.log(req.params)
+    console.log("req.params")
 
     try {
 
@@ -124,15 +124,15 @@ const getIdComapy = async (req, res) => {
 }
 
 const getIndustry = async (req, res) => {
-    console.log("ApiCall")
+  
 
     try {
 
-        let query = 'select * from industry'
+        let query = 'select * from industries'
         let data = await pool.query(query)
 
         let result = await data.rows
-        console.log(result)
+ 
 
 
         res.send(result)
@@ -142,18 +142,17 @@ const getIndustry = async (req, res) => {
         res.status(400).send(err.message)
     }
 }
-const deletedComapy = async (req, res) => {
+const deletedCompany = async (req, res) => {
 
-    let id= parseInt(req.params.cm_id,10)
-    let industry_id= parseInt(req.params.ind_id,10)
-console.log("deltedId",id)
+    let id= parseInt(req.params.id,10)
+
 
     try {
 
         let query = 'DELETE FROM company WHERE id = $1'; 
-        let industry_query = 'DELETE FROM industry WHERE industry_id = $1';  
+ 
         let Cmpdata = await pool.query(query,[id])
-        let Inddata = await pool.query(industry_query,[industry_id])
+    
 
 
         res.send('ok')
@@ -169,5 +168,5 @@ module.exports = {
     create,
     update,
     getAllComapy,
-    deletedComapy 
+    deletedComapy: deletedCompany 
 }
