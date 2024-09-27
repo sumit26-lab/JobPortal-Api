@@ -5,11 +5,11 @@ const path= require('path')
 const fs=require('fs')
 const ejs = require('ejs'); // Don't forget to import ejs
 require('dotenv').config()
-var transporter = nodemailer.createTransport({
-  service: process.env.GService,
+var transporter =  nodemailer.createTransport({
+  service: 'gmail',
   auth: {
-    user: process.env.GUSER,
-    pass: process.env.GPASS
+    user: 'sr26rajput@gmail.com',
+    pass: 'rbkc krkk rzpo dyxk'
   }
 });
 
