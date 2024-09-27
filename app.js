@@ -29,11 +29,11 @@ const rootRoute= require('./route/root')
 var cors = require('cors')
 const path= require('path')
 
-    
+
 
 app.use(bodyParer.urlencoded({extended:false}))
 app.use(bodyParer.json())
-let whiltelist=['https://jobtageweb.vercel.app','http://localhost:3000']
+let whiltelist=['https://jobtageweb.vercel.app/','http://localhost:3000']
 const corsOptions={
     origin:(origin,cb)=>{
         if(!origin ||whiltelist.includes(origin)){
