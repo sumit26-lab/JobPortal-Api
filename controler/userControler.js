@@ -174,7 +174,7 @@ exports.forgetpassword = async (req, res) => {
   let { resetToken, passwordResetToken, passwordResetTokenExpire } = await CreateResetToken()
   let date = new Date(passwordResetTokenExpire)
   //  let resetUrl=`${req.protocol}://localhost:3000/PasswordReset/${resetToken}`
- let resetLink = `https://vercel.com/sumits-projects-f77cbd19/jobtageapp/PasswordReset/${resetToken}`;
+ let resetLink = `https://jobtageweb.vercel.app/PasswordReset/${resetToken}`;
   //let message = `we have received a reset password requset Plase use this below link to reset you password \n\n ${resetLink}\n\n this reset password link valid only in 10 mints `
  console.log(resetLink)
   try {
