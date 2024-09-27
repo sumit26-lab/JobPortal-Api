@@ -120,7 +120,7 @@ exports.Login = async (req, res) => {
     //  console.log("user",user)
 
     const otp = Math.floor(1000 + Math.random() * 9000)
-    let emailSender =   await   sendEmail(email,'otp',{ name: username, otp: otp })
+    let email_id =   await   sendEmail(email,'otp',{ name: username, otp: otp })
 
     let expiry_time = new Date()
     expiry_time.setMinutes(expiry_time.getMinutes() + 20)
@@ -134,7 +134,7 @@ exports.Login = async (req, res) => {
     }
 
     await pool.query(queryOtp)
-    return res.status(401).json({ status: false, message: 'Plase Verfiyed You Accocout', email })
+    return res.status(401).json({ status: false, message: 'Plase Verfiyed You Accocout', email,email_id })
 
   }
 
