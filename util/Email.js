@@ -4,34 +4,15 @@ const crypto= require('crypto')
 const path= require('path')
 const fs=require('fs')
 const ejs = require('ejs'); // Don't forget to import ejs
+require('dotenv').config()
 var transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: process.env.GService,
   auth: {
-    user: 'sr26rajput@gmail.com',
-    pass: 'rbkc krkk rzpo dyxk'
+    user: process.env.GUSER,
+    pass: process.env.GPASS
   }
 });
-// const EmailSend=({to,subject,text})=>{
-//  text=text.toString()
 
-//  return new Promise((resolve,reject)=>{
-
-//   var mailOptions = {
-//     to: to,
-//     subject: subject,
-//     text: text
-//   };
-  
-//   transporter.sendMail(mailOptions, function(error, info){
-//     if (error) {
-//       throw reject(error)
-//     } else {
-//       resolve( info.response)
-//     }
-//   });
-//  })
-// }
-// Function to load and render the EJS template
 const getHtmlTemplate = (templateName, data) => {
   const templatePath = path.join(__dirname, '..', 'views', `${templateName}.ejs`); // Adjust path as necessary
   const template = fs.readFileSync(templatePath, 'utf-8'); // Read the template file
