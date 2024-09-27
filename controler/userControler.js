@@ -1,6 +1,6 @@
 const bycrpt = require('bcrypt')
 const pool = require('../util/db')
-const { CreateResetToken, EmailSend } = require('../util/Email')
+const { CreateResetToken, sendEmail } = require('../util/Email')
 const crypto = require('crypto')
 
 const jwt = require('jsonwebtoken')
@@ -19,11 +19,12 @@ exports.Signup = async (req, res) => {
     let Hspassword = await bycrpt.hash(password, 10)
     let query = 'insert into  user_account (username,password,email,user_type_id,gender,contactphone)values($1,$2,$3,$4,$5,$6) returning  user_account_id'
     let insertData = await pool.query(query, [username, Hspassword, email, user_type, gender, contactphone])
-    let emailSender = await EmailSend({ to: email, subject: "OTP-verification", text: `Your Otp is ${otp}` })
+    //let emailSender = await EmailSend({ to: email, subject: "OTP-verification", text: `Your Otp is ${otp}` })
+     sendEmail(email,'otp',{ name: username, otp: otp })
     let queryOtp = 'insert into otp(otp_code,expiry_time,user_email)values($1,$2,$3)'
     let expiry_time = new Date()
     expiry_time.setMinutes(expiry_time.getMinutes() + 20)
-    let data = await insertData.rows[0]
+    await insertData.rows[0]
 
     await pool.query(queryOtp, [otp, expiry_time, email])
     return res.status(200).json({ status: 'success', message: "verifationis panding check You Email" })
@@ -42,11 +43,11 @@ exports.resendOtp = async (req, res) => {
   let expiry_time = new Date()
   expiry_time.setMinutes(expiry_time.getMinutes() + 20)
   let { email } = req.body
+   
+let username=req.username
   try {
-    if (!email) {
-      return new Error("email is not provide")
-    }
-    let emailSender = await EmailSend({ to: email, subject: "OTP-verification", text: `Your Otp is ${otp}` })
+    
+    let emailSender = await sendEmail(email, 'Resend OTP' , {username, otp} )
     let queryOtp = {
       text: `INSERT INTO otp(otp_code,expiry_time,user_email)
       values($1,$2,$3)
@@ -56,6 +57,7 @@ exports.resendOtp = async (req, res) => {
     }
 
     let { rows } = await pool.query(queryOtp)
+    console.log("rows", rows)
     if (!rows) {
       return res.status(500).json("server Error");
     }
@@ -73,24 +75,30 @@ exports.verifyOtp = async (req, res) => {
   let otp = req.body.otp
   let email = req.body.email
 
+
   try {
 
-    let queryOtp = 'select otp_code ,expiry_time  from otp where user_email=$1 and otp_code=$2'
+    let queryOtp = `SELECT 
+    otp_code,
+    CASE 
+        WHEN expiry_time < NOW() THEN 'expire'
+        ELSE 'valid'
+    END AS status
+FROM otp 
+WHERE user_email = $1 AND otp_code = $2`
 
     let data = await pool.query(queryOtp, [email, otp])
     let result = await data.rows[0]
+    console.log('result', result)
     if (!result) {
       throw new Error('Invalid Otp :')
     }
-    if (result.expiry_time < new Date()) {
-      throw new Error('OTP has expired');
 
-    }
     let queryverifyOtp = 'update  user_account set is_active=true where email =$1'
-    let is_active = await pool.query(queryverifyOtp, [email])
+    await pool.query(queryverifyOtp, [email])
     let Querdeleteverfy = 'delete from otp where user_email=$1'
     let deletdVerfy = await pool.query(Querdeleteverfy, [email])
-    res.sendStatus(200)
+    res.status(200).json(result)
   } catch (error) {
     console.log(error.message)
     res.status(400).send({ error: error.message })
@@ -99,18 +107,41 @@ exports.verifyOtp = async (req, res) => {
 }
 
 exports.Login = async (req, res) => {
+
+
   if (!req.user) {
     return res.status(400).json({ message: 'User not found.' });
   }
   let { password } = req.body
 
 
-  let { password: Hspassword, user_account_id, user_type_id, username } = req.user
+  let { password: Hspassword, user_account_id, user_type_id, username, is_active, email } = req.user
+  if (!is_active) {
+    //  console.log("user",user)
+
+    const otp = Math.floor(1000 + Math.random() * 9000)
+    let emailSender =   await   sendEmail(email,'otp',{ name: username, otp: otp })
+
+    let expiry_time = new Date()
+    expiry_time.setMinutes(expiry_time.getMinutes() + 20)
+
+    let queryOtp = {
+      text: `insert into otp(otp_code,expiry_time,user_email)
+      values($1,$2,$3) 
+      ON CONFLICT(user_email)DO UPDATE 
+      SET otp_code=$1,expiry_time=$2`,
+      values: [otp, expiry_time, email]
+    }
+
+    await pool.query(queryOtp)
+    return res.status(401).json({ status: false, message: 'Plase Verfiyed You Accocout', email })
+
+  }
 
 
 
 
-  let accessToken = jwt.sign({ "UserInfo": { username, user_account_id, user_type_id } }, process.env.ACCESS_SECRET_TOKEN, { expiresIn: '25s' })
+  let accessToken = jwt.sign({ "UserInfo": { username, user_account_id, user_type_id, is_active } }, process.env.ACCESS_SECRET_TOKEN, { expiresIn: '25s' })
 
   let refreshToken = jwt.sign({
     "UserInfo": {
@@ -135,7 +166,7 @@ exports.Login = async (req, res) => {
   res.json({ accessToken })
 
 }
-
+//post Api
 exports.forgetpassword = async (req, res) => {
   // let { identifyer } = req.body;
 
@@ -143,9 +174,9 @@ exports.forgetpassword = async (req, res) => {
   let { resetToken, passwordResetToken, passwordResetTokenExpire } = await CreateResetToken()
   let date = new Date(passwordResetTokenExpire)
   //  let resetUrl=`${req.protocol}://localhost:3000/PasswordReset/${resetToken}`
-  resetUrl = `${req.protocol}://${req.headers.host}/PasswordReset/${resetToken}`;
-  let message = `we have received a reset password requset Plase use this below link to reset you password \n\n ${resetUrl}\n\n this reset password link valid only in 10 mints `
-  console.log(message)
+ let resetLink = `https://vercel.com/sumits-projects-f77cbd19/jobtageapp/PasswordReset/${resetToken}`;
+  //let message = `we have received a reset password requset Plase use this below link to reset you password \n\n ${resetLink}\n\n this reset password link valid only in 10 mints `
+ console.log(resetLink)
   try {
 
     let queryOtp = {
@@ -157,12 +188,13 @@ exports.forgetpassword = async (req, res) => {
     //Execute the query to insert or update OTP
     await pool.query(queryOtp);
 
+    let {username,email}=data
 
-    await EmailSend({
-      to: data.email,
-      subject: 'password change request received',
-      text: message
-    });
+    await sendEmail(
+      email,
+      'Reset-Password-link',
+      {username, resetLink}
+    );
 
 
     res.status(200).json({
@@ -202,12 +234,23 @@ exports.resetPassword = async (req, res) => {
     if (result.status == 'Expired') {
       return res.status(400).json({ status: 'error', message: 'Token is expired.' })
     }
+    if (result.status == 'Valid') {
+      let deleteToken = {
+        text: 'DELETE  FROM resetpasswordtokens where user_account_id =$1',
+        values: [result.user_account_id]
+      }
+      let response = await pool.query(deleteToken)
+
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Token is valid.',
+        user_account_id: result.user_account_id
+      });
+    }
+
     //response.rows[0]
-    res.status(200).json({
-      status: 'success',
-      message: 'Token is valid.',
-      user_account_id: result.user_account_id
-    });
+  
 
   }
   catch (err) {
@@ -300,9 +343,39 @@ exports.getCookie = async (req, res) => {
   }
 
 }
-exports.Edit = async (req, res) => {
-  console.log("edit")
-  res.sendStatus(201)
+exports.deleteResetPasswordToken = async (req, res) => {
+  const user_account_Id = req.params.id;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN'); // Start transaction
+
+    // Delete from applications and return the id
+    const applicationsQuery = 'DELETE FROM applications WHERE user_account_id = $1 RETURNING id';
+    const result = await client.query(applicationsQuery, [user_account_Id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "No applications found for this user." });
+    }
+
+    let { id } = await result.rows[0];
+    console.log("userId", id)
+    if (id) {
+      const application_historQuery = ' DELETE FROM application_history where application_id =$1 RETURNING id'
+      const result = await client.query(application_historQuery, [id])
+      console.log("deleteHistroy--", result.rows[0])
+    }
+    await client.query('COMMIT'); // Commit transaction
+    res.status(204).send(); // No Content
+  } catch (err) {
+    await client.query('ROLLBACK'); // Rollback on error
+    console.error("Error during transaction", err.message);
+    res.status(400).send(err.message);
+  } finally {
+    if (client) {
+      client.release(); // Release the client back to the pool
+    }
+  }
 }
 
 exports.getRecentJobs = async (req, res) => {
@@ -385,4 +458,71 @@ exports.getRecentJobs = async (req, res) => {
 
 
 
+}
+exports.deleteUser = async (req, res) => {
+  let user_account_id = req.params.id
+  console.log("userApi", user_account_id)
+  if (user_account_id == null && user_account_id == undefined) return res.status(400).json({ status: false, message: "user_account_id not provided" });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN')
+    let userlog = 'delete from  user_log  where user_account_id=$1'
+    await pool.query(userlog, [user_account_id])
+
+
+
+    let query = 'delete from  user_account  where user_account_id=$1'
+    let User_Account = await pool.query(query, [user_account_id])
+    if (User_Account.rowCount === 0) {
+      return res.status(404).json({ message: "No applications found for this user." });
+    } await client.query('COMMIT')
+    res.status(204).send()
+  }
+  catch (error) {
+    console.error(error)
+    res.status(500).send(error);
+
+  } finally {
+    if (client) {
+      client.release()
+    }
+  }
+
+
+}
+
+
+exports.GetState = async (req, res) => {
+
+
+  try {
+    const result = await pool.query('SELECT DISTINCT city_state FROM cities');
+    let state = await result.rows
+
+    res.status(200).json({ status: 'success', state })
+
+  }
+  catch (err) {
+    console.error(err)
+    res.status(400).json({ message: err.message })
+  }
+
+}
+exports.GetCity = async (req, res) => {
+  const stateName = req.params.stateName;
+  console.log(stateName)
+
+  try {
+    const result = await pool.query('SELECT * FROM cities WHERE city_state ILIKE $1', [stateName]);
+    const cities = await result.rows;
+
+    if (cities.length > 0) {
+      res.status(200).json({ status: 'success', cities })
+    } else {
+      res.status(404).json({ message: "No cities found for the specified state." });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error." });
+  }
 }

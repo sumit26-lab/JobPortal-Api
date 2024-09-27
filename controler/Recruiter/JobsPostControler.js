@@ -1,10 +1,10 @@
 const pool = require('../../util/db')
 exports.create = async (req, res) => {
-    console.log("JobPostData",req.body)
-    let { posted_by_id, job_type_id,job_location_id,  company_id } = req.body
+    console.log("JobPostData", req.body)
+    let { posted_by_id, job_type_id, job_location_id, company_id } = req.body
     try {
         let PostQuery = 'insert into job_post(posted_by_id,job_type_id,job_location_id,company_id)values($1,$2,$3,$4) returning  id'
-        let postData = await pool.query(PostQuery, [posted_by_id, job_type_id,job_location_id, company_id])
+        let postData = await pool.query(PostQuery, [posted_by_id, job_type_id, job_location_id, company_id])
         let id = await postData.rows
 
         res.send(id)
@@ -132,7 +132,7 @@ exports.create = async (req, res) => {
 // };
 exports.getJobById = async (req, res) => {
     let id = parseInt(req.params.id, 10);
-    console.log("jobId",id)
+    console.log("jobId", id)
     if (!id || isNaN(id)) {
         return res.status(400).json({ message: 'Invalid job post ID' });
     }
@@ -184,7 +184,7 @@ JOIN
     try {
 
         const { rows } = await pool.query(query, [id]);
-        const response = { data:rows[0], status: 'success' };
+        const response = { data: rows[0], status: 'success' };
         res.status(200).json(response);
     } catch (err) {
         console.error('Error executing query:', err);
@@ -206,7 +206,7 @@ exports.getAllJobpost = async (req, res) => {
     if (!validSortByfields.includes(sortBy)) {
         sortBy = 'jp.createat'
     }
-   
+
     if (!['ASC', 'DESC'].includes(sortOrder)) {
         sortOrder = 'ASC'
     }
@@ -286,10 +286,10 @@ LIMIT $${queryparameter.length + 1} OFFSET $${queryparameter.length + 2}`;
     }
 
 
-    
+
 }
 exports.getALLJobs = async (req, res) => {
-  console.log("Apicall")
+    console.log("Apicall")
 
     let { page = 1, limit = 3, sortBy = 'jp.createat', sortOrder = 'ASC', search = "" } = req.query;
     let offset = (page - 1) * limit; //  if pages 5-1 4 *3 12
@@ -346,8 +346,8 @@ exports.getALLJobs = async (req, res) => {
         JOIN   
             business_streams bs ON c.business_streams_id = bs.id 
             `;
-            let countparameter = []
-            let queryparameter = []
+    let countparameter = []
+    let queryparameter = []
     if (search) {
         countQuery += `
     AND jt.title ILIKE $1
@@ -355,21 +355,21 @@ exports.getALLJobs = async (req, res) => {
         query += `
     AND jt.title ILIKE $1
     `
-    countparameter.push(searchQuery)
-    queryparameter.push(searchQuery)
+        countparameter.push(searchQuery)
+        queryparameter.push(searchQuery)
     }
     query += `
 ORDER BY
     ${sortBy} ${sortOrder}
-LIMIT $${queryparameter.length +1} OFFSET $${queryparameter.length +2}`;
-queryparameter.push(limit, offset);
+LIMIT $${queryparameter.length + 1} OFFSET $${queryparameter.length + 2}`;
+    queryparameter.push(limit, offset);
     // queryparameter.push(limit, offset)
     // console.log(query)
     try {
-        const countResult = await pool.query(countQuery,countparameter);
+        const countResult = await pool.query(countQuery, countparameter);
         const totalCount = countResult?.rows[0].total_count;
-        const { rows } = await pool.query(query,queryparameter);
-        console.log("rows",rows)
+        const { rows } = await pool.query(query, queryparameter);
+        console.log("rows", rows)
         res.status(200).json({
             totalCount, page, limit, rows
         });
@@ -379,28 +379,38 @@ queryparameter.push(limit, offset);
     }
 
 
-    
+
 }
 
 
 
-exports.UpdateJobPost=async(req,res)=>{
+exports.UpdateJobPost = async (req, res) => {
     let id = parseInt(req.params.id, 10);
     if (!id || isNaN(id)) {
         return res.status(400).json({ message: 'Invalid job post ID' });
     }
 
 
-    let query=` UPDATE  job_post SET  `
+    let query = ` UPDATE  job_post SET  `
 }
 
-exports.deleteJobPost=async(req,res)=>{
-    let id= parseInt(req.params.id,10)
-    if(!id|| isNaN(id)){
-        return res.status(400).json({message:"Invalid delete id"})
+exports.deleteJobPost = async (req, res) => {
+    let id = parseInt(req.params.id, 10)
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ message: "Invalid delete id" })
     }
-    const query='DELETE FROM job_post where id=$1'
-    const queryinput=await pool.query(query,[id])
-    const  response=await queryinput.rowCount
-    res.sendStatus(204)
+    try {
+
+        const query = 'DELETE FROM job_post where posted_by_id=$1'
+        const job_post = await pool.query(query, [id])
+
+        // if (job_post.rowCount === 0) {
+        //     return res.status(404).json({ message: "No applications found for this user." });
+        // }
+        res.status(204).send()
+    }
+    catch (err) {
+        console.error(error)
+        res.status(500).send(error);
+    }
 }

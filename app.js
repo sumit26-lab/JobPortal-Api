@@ -7,7 +7,7 @@ const port = process.env.PORT || 4000;
 const userRoute= require('./route/user')
 const jobseeker= require('./route/Jobeeker_route/jobseeker')
  const resume= require('./route/Jobeeker_route/resume')
-const experience= require('./route/Jobeeker_route/experience')
+const experience_detail= require('./route/Jobeeker_route/experience_detail')
 const education_detail= require('./route/Jobeeker_route/education_detail')
 const jobApply=require('./route/Jobeeker_route/applayRoute')
 
@@ -63,7 +63,7 @@ app.use('/api/Jobprofile',jobseeker)
 app.use('/api/Job_skiil',jobSkill)
 app.use('/api/resume',resume)
 app.use('/api/eduction_details',education_detail)
-app.use('/api/experinace',experience)
+app.use('/api/experience_detail',experience_detail)
 app.use('/api/jobapply',jobApply)
 //Recruter Routes
 app.use('/api/company',company)

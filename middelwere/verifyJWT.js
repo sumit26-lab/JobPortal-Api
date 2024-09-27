@@ -14,6 +14,7 @@ const verfiyUser=(req,res,next)=>{
                  //{return res.sendStatus(403)}
                 req.username=decode.UserInfo.username,
                 req.roles_id=decode.UserInfo.roles_id
+                req.user_account_id=decode.UserInfo.user_account_id
                 
               next()
         })

@@ -1,61 +1,37 @@
 const pool = require('../../util/db')
-const {putObjectUrl}= require('../../util/uploadfile')
-const fs= require('fs')
+const {putObjectUrl,deleteObjectFromS3}= require('../../util/uploadfile')
+
 const path= require('path')
 exports.create = async (req, res) => {
+   let user_id= req.user_account_id
+    if (!req.file ) {
+        return res.status(400).send("File not found");
+    }
+    const buffer = req.file.buffer
+    let originalFileName= req.file.originalname
+    let file_type= req.file.mimetype
+    let file_size = req.file.size
 
+    
+    let klobytis = file_size / 1024
+    let megabits = klobytis.toFixed(2)
+    megabits = parseInt(megabits)
+    const customFileName = `resume-${Date.now()}${path.extname(originalFileName)}`;
     try {
-       
-        if (req.file) {
-           
-            const filePath = req.file.path
-            let fileName= req.file.filename
-            let file_type= req.file.mimetype
-            let file_size = req.file.size
-          
-            let { user_account_id } = req.body
-            
-            let klobytis = file_size / 1024
-            let megabits = klobytis.toFixed(2)
-            megabits = parseInt(megabits)
-           
+       await putObjectUrl(customFileName,file_type,buffer)
       
-            fs.readFile(filePath, (err, data) => {
-               
-                if (err) {
-                    return res.status(500).send('Error reading file.');
-                }
-               putObjectUrl(fileName,file_type,data)
-               
-                // Process the file buffer or data
-            })
-            // console.log('File buffer:', buffer); // 'data' is a Buffer
+             let resume_url=`https://jobportal-bucket-app.s3.ap-south-1.amazonaws.com/uploads/${customFileName}`
             
-        
-            fs.unlink(filePath,(err)=>{
-               if(err){
-                console.log("Error",err)
-               }
-               else{
-                    console.log('sucessfuliy------delete file')
-               }
-            })
-             let resume_url=`https://jobportal-bucket-app.s3.ap-south-1.amazonaws.com/uploads/${fileName}`
-            
-
-            console.log(`resumeUrl -${resume_url}, fileSize -${file_size} file_type - ${file_type} user_id ${user_account_id}`)
+            console.log("url",resume_url)
+            console.log(`resumeUrl -${resume_url}, fileSize -${file_size} file_type - ${file_type} user_id ${user_id}`)
             let query_experience_detail = 'insert into  resume(user_account_id,resume_url,file_size,file_type)values($1,$2,$3,$4)'
-            let skillset = await pool.query(query_experience_detail, [user_account_id, resume_url, megabits, file_type])
+            let skillset = await pool.query(query_experience_detail, [user_id, resume_url, megabits, file_type])
              res.status(201).send({message:'File uploaded and resume created successfully.'});
-            // // This will cause the error
-        } else {
-            res.status(400).send('No file uploaded or upload failed.');
-        }
-
+            // // This will cause the err
 
     }
     catch (err) {
-        res.status(400).json({ message: err.message })
+        res.status(400).json({ message: err })
 
     }
 
@@ -114,7 +90,10 @@ exports.getIdBy = async (req, res) => {
 }
 exports.delete = async (req, res) => {
     let id = req.params.id
+    let {key}=req.body
+    
     try {
+        await deleteObjectFromS3(key)
 
         let query = 'DELETE  from resume where user_account_id=$1'
         let data = await pool.query(query, [id])

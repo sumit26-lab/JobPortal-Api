@@ -1,10 +1,10 @@
 const pool = require('../../util/db')
 exports.create = async (req, res) => {
     console.log("companylocation",req.body)
-    let {street_address,city,state,zip } = req.body
+    let {street_address,city,state } = req.body
     try {
-        let stramQuery = 'insert into company_location(street_address,state,city,zip)values($1,$2,$3,$4) returning  id'
-        let stream = await pool.query(stramQuery, [street_address,city,state,zip])
+        let stramQuery = 'insert into company_location(street_address,state,city)values($1,$2,$3) returning  id'
+        let stream = await pool.query(stramQuery, [street_address,state,city])
         let id = await stream.rows[0]
 
         res.send(id)
@@ -20,14 +20,13 @@ exports.update= async(req,res)=>{
     let { street_address,city,state,zip } = req.body
     try{
 
-        let query_update=`INSERT INTO company_location(id,street_address ,city ,state,zip)
-        VALUES($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET
+        let query_update=`INSERT INTO company_location(id,street_address ,city ,state)
+        VALUES($1,$2,$3,$4) ON CONFLICT (id) DO UPDATE SET
         street_address=EXCLUDED.street_address,
         city=EXCLUDED.city,
         state=EXCLUDED.state,
-        zip=EXCLUDED.zip
         `
-        let updateRow= await pool.query(query_update,[id,street_address,city,state,zip])
+        let updateRow= await pool.query(query_update,[id,street_address,city,state])
         let result= updateRow.rowCount
         res.sendStatus(201)
     }

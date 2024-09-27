@@ -16,8 +16,9 @@ let refreshToken=cookies.jwt
     }
     let data= await pool.query(query)
     let rows =await data.rows[0] 
-    if (rows&&rows.length === 0) {
-        return res.send("User Not Found! ") // User not found
+    if (rows==undefined) return 
+    if ( rows.length == 0) {
+        return res.status(400).send("User Not Found! ") // User not found
     }
 
     
