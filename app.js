@@ -33,10 +33,11 @@ const path= require('path')
 
 app.use(bodyParer.urlencoded({extended:false}))
 app.use(bodyParer.json())
-let whiltelist=['https://jobtageweb.vercel.app/','http://localhost:3000']
+const whitelist = ['https://jobtageweb.vercel.app', 'http://localhost:3000'];
+
 const corsOptions={
     origin:(origin,cb)=>{
-        if(!origin ||whiltelist.includes(origin)){
+        if(!origin ||whitelist.includes(origin)){
             console.log(origin)
 
             cb(null,true)
