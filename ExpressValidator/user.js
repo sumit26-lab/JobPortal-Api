@@ -1,6 +1,8 @@
 const { body } = require('express-validator')
 const bcrypt = require('bcrypt')
 const pool = require('../util/db')
+const {EmailSend}= require('../util/Email')
+const { text } = require('body-parser')
 
 let registerion = [
     body('username')
@@ -29,7 +31,6 @@ let registerion = [
     body('password').isLength({ min: 5, max: 8 }).withMessage('password should be min 5 max 8')
 ]
 let login = [
-    
     body('identifyer')
     .trim()
     .notEmpty().withMessage('Identifier (username or email) is required.')
@@ -45,6 +46,7 @@ let login = [
             
             throw new Error('Invalid username or email.');
         }
+       
         
         req.user = rows[0]; // Set the user data on the request object
         return true
@@ -84,13 +86,38 @@ body('identifyer')
 
       return true
 
-})
+}),
 
 
 ]
 ///api/v1/users/verify-otp
 
+let ResendOtp=[
+    body('email')
+    .isEmail()
+    .withMessage('Invalid email address')
+    .custom(async(value,{req})=>{
+        let User_Account={
+            text:'select username from user_account where email=$1',
+            values:[value]
+        }
+           
+        let user = (await pool.query(User_Account)).rows[0];
+        if(!user){
+            return Promise.reject("Email  is not Foound this otp")
+        }
+        req.username=user.username
+        return true;
+    })
+
+        
+        // Return true if validation passes
+       
+       
+  
+]
 let verifyOtp=[
+
     body('email').isEmail().withMessage('Invalid email address'),
     body('otp').trim().notEmpty().withMessage('OTP is required'),
 
@@ -130,4 +157,4 @@ let verifyOtp=[
     
     ]
     
-module.exports = { registerion,login,  forgetpassword,verifyOtp }
+module.exports = { registerion,login,  forgetpassword,verifyOtp,ResendOtp }
