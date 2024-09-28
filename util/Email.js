@@ -19,6 +19,9 @@ const getHtmlTemplate = (templateName, data) => {
   return ejs.render(template, data); // Render the template with data
 };
 const sendEmail = (to, type, data) => {
+  return new Promise((resolve,reject)=>{
+
+
   let subject;
   let templateName;
 
@@ -37,7 +40,7 @@ const sendEmail = (to, type, data) => {
           templateName = 'reset-password'; // EJS template for verification
           break;
       default:
-          throw new Error('Invalid email type');
+        return reject(new Error('Invalid email type'));
   }
 
   const mailOptions = {
@@ -49,11 +52,12 @@ const sendEmail = (to, type, data) => {
 
   transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-          return console.log('Error occurred:', error);
+        return reject(new Error(error));
       }
       console.log('Message sent:', info.messageId);
-      return info.messageId
+      resolve(info.messageId);
   });
+})
 };
 
 

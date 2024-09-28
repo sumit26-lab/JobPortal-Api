@@ -120,8 +120,8 @@ exports.Login = async (req, res) => {
     //  console.log("user",user)
 
     const otp = Math.floor(1000 + Math.random() * 9000)
-    let email_id =   await   sendEmail(email,'otp',{ name: username, otp: otp })
-
+    let email_id =   await sendEmail(email,'otp',{ name: username, otp: otp })
+  console.log("Signin",email_id)
     let expiry_time = new Date()
     expiry_time.setMinutes(expiry_time.getMinutes() + 20)
 
