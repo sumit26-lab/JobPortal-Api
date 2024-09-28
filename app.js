@@ -51,8 +51,7 @@ const corsOptions={
     optionsSuccessStatus:200,
     credentials: true  
 }
-app.options('*', cors(corsOptions)); // Respond to preflight requests
-
+app.use(cors(corsOptions))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname,'/public')))
 app.use('/',rootRoute)
