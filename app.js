@@ -38,15 +38,15 @@ const whitelist = ['https://jobtageweb.vercel.app', 'http://localhost:3000'];
 const corsOptions={
     origin:(origin,cb)=>{
         if(!origin ||whitelist.includes(origin)){
-            console.log(origin)
+            console.log('Allowed origin:', origin);
 
             cb(null,true)
         }else{
-            console.log("Error",origin)
+            console.log('Error: Origin not allowed:', origin)
             cb(new Error('Not allowed by CORS'))
         }
     },
-    methods:["GET,POST,DELETE,PUT,PATCH"],
+    methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
 
     optionsSuccessStatus:200,
     credentials: true  
