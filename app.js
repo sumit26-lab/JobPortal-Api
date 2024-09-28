@@ -35,22 +35,29 @@ app.use(bodyParer.urlencoded({extended:false}))
 app.use(bodyParer.json())
 const whitelist = ['https://jobtageweb.vercel.app', 'http://localhost:3000'];
 
-const corsOptions={
-    origin:(origin,cb)=>{
-        if(!origin ||whitelist.includes(origin)){
-            console.log('Allowed origin:', origin);
+// const corsOptions={
+//     origin:(origin,cb)=>{
+//         if(!origin ||whitelist.includes(origin)){
+//             console.log('Allowed origin:', origin);
 
-            cb(null,true)
-        }else{
-            console.log('Error: Origin not allowed:', origin)
-            cb(new Error('Not allowed by CORS'))
-        }
-    },
+//             cb(null,true)
+//         }else{
+//             console.log('Error: Origin not allowed:', origin)
+//             cb(new Error('Not allowed by CORS'))
+//         }
+//     },
+//     methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
+
+//     optionsSuccessStatus:200,
+//     credentials: true  
+// }
+const corsOptions = {
+    origin: '*', // Allow all origins temporarily
     methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
+    optionsSuccessStatus: 200,
+    credentials: true
+};
 
-    optionsSuccessStatus:200,
-    credentials: true  
-}
 app.use(cors(corsOptions))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname,'/public')))
