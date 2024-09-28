@@ -49,9 +49,10 @@ const corsOptions={
     methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
 
     optionsSuccessStatus:200,
-    credentials: false  
+    credentials: true  
 }
-app.use(cors(corsOptions))
+app.options('*', cors(corsOptions)); // Respond to preflight requests
+
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname,'/public')))
 app.use('/',rootRoute)
